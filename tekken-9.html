@@ -1,0 +1,948 @@
+<html>
+<head>
+<base href="https://www.example.com">
+<style>
+body {
+    margin: 0;
+    overflow: hidden;
+    background: linear-gradient(to bottom, #2c3e50, #3498db);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: 'Press Start 2P', cursive;
+}
+
+#gameCanvas {
+    border: 4px solid #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+.health-bars {
+    position: absolute;
+    top: 20px;
+    width: 800px; 
+    display: flex;
+    justify-content: space-around;
+    padding: 0 20px;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.health-bar {
+    width: 300px;
+    height: 20px;
+    background: rgba(0,0,0,0.5);
+    border: 2px solid #fff;
+}
+
+.health-fill {
+    height: 100%;
+    background: #e74c3c;
+    transition: width 0.3s;
+}
+
+#p1Health {
+    float: left;
+}
+
+#p2Health {
+    float: right;
+}
+
+.controls-guide {
+    position: fixed; 
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7); 
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    text-align: center;
+    font-size: 12px;
+    width: 780px; 
+    pointer-events: none;
+}
+
+.control-key {
+    display: inline-block;
+    background: #fff;
+    color: #000;
+    padding: 2px 5px;
+    border-radius: 3px;
+    margin: 0 3px;
+}
+
+.menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.8);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.menu {
+  background: #2c3e50;
+  padding: 20px;
+  border-radius: 10px;
+  color: white;
+  text-align: center;
+}
+
+.menu h2 {
+  margin: 0 0 20px 0;
+}
+
+.menu-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.menu button {
+  background: #3498db;
+  border: none;
+  padding: 10px 20px;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.menu button:hover {
+  background: #2980b9;
+}
+
+#damageIndicator {
+    position: absolute;
+    left: 10px; 
+    top: 50%;
+    transform: translateY(-50%);
+    color: yellow;
+    font-size: 24px;
+    text-shadow: 2px 2px 2px black;
+    font-family: 'Press Start 2P', cursive;
+    opacity: 0;
+    transition: opacity 0.3s;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    pointer-events: none;
+    width: 300px;
+}
+
+.main-menu {
+  background: rgba(0,0,0,0.9);
+  padding: 40px;
+  border: 4px solid #fff;
+}
+
+.main-menu h1 {
+  color: #fff;
+  font-size: 48px;
+  margin-bottom: 40px;
+  text-shadow: 0 0 10px rgba(255,255,255,0.5);
+}
+
+.main-menu button {
+  width: 300px;
+  height: 60px;
+  font-size: 24px;
+  margin: 10px;
+  background: transparent;
+  border: 2px solid #fff;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.main-menu button:hover {
+  background: #fff;
+  color: #000;
+}
+</style>
+</head>
+<body>
+<div id="mainMenu" class="menu-overlay" style="display: flex;">
+  <div class="menu main-menu">
+    <h1>FIGHTER GAME</h1>
+    <div class="menu-options">
+      <button onclick="startArcadeMode()">Arcade Mode</button>
+      <button onclick="startPracticeMode()">Practice Mode</button>
+      <button onclick="showSettings()">Settings</button>
+    </div>
+  </div>
+</div>
+<div class="health-bars">
+    <div class="health-bar"><div id="p1Health" class="health-fill" style="width: 100%"></div></div>
+    <div class="health-bar"><div id="p2Health" class="health-fill" style="width: 100%"></div></div>
+</div>
+<canvas id="gameCanvas"></canvas>
+<div class="controls-guide">
+    Player 1 Controls: 
+    <span class="control-key">A/D</span> Move 
+    <span class="control-key">W</span> Jump 
+    <span class="control-key">G</span> Punch 
+    <span class="control-key">H</span> Kick 
+    <span class="control-key">J</span> Launcher
+    <span class="control-key">K</span> Bound
+    <span class="control-key">P</span> Pause
+    <span class="control-key">ESC</span> Return to Main Menu
+</div>
+<div id="damageIndicator" style="position: absolute;
+    left: 10px; 
+    top: 50%;
+    transform: translateY(-50%);
+    color: yellow;
+    font-size: 24px;
+    text-shadow: 2px 2px 2px black;
+    font-family: &apos;Press Start 2P&apos;, cursive;
+    opacity: 0;
+    transition: opacity 0.3s;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    pointer-events: none;
+    width: 300px;
+">
+    <div id="comboDamage"></div>
+    <div id="damageScaling" style="color: white; font-size: 16px;"></div>
+</div>
+
+<div class="menu-overlay" id="pauseMenu">
+  <div class="menu">
+    <h2>Game Paused</h2>
+    <div class="menu-options">
+      <button onclick="resumeGame()">Resume</button>
+      <button onclick="openSettings()">Battle Settings</button>
+      <button onclick="resetGame()">Reset Match</button>
+      <button onclick="returnToMainMenu()">Main Menu</button>
+    </div>
+  </div>
+</div>
+
+<div class="menu-overlay" id="settingsMenu">
+  <div class="menu">
+    <h2>Battle Settings</h2>
+    <div class="menu-options">
+      <button onclick="setP2Mode(&apos;dummy&apos;)">Training Dummy</button>
+      <button onclick="setP2Mode(&apos;blocking&apos;)">Blocking Dummy</button>
+      <button onclick="setP2Mode(&apos;cpu&apos;)">CPU Opponent</button>
+      <button onclick="setP2Mode(&apos;following&apos;)">Following Dummy</button>
+      <button onclick="closeBattleSettings()">Back</button>
+    </div>
+  </div>
+</div>
+
+<script>const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth > 800 ? 800 : window.innerWidth;
+canvas.height = 400;
+let gamePaused = false;
+let p2Mode = 'dummy';
+let gameMode = null;
+function pauseGame() {
+  gamePaused = true;
+  if (gameMode === 'practice') {
+    document.getElementById('pauseMenu').style.display = 'flex';
+  } else {
+    document.getElementById('pauseMenu').style.display = 'flex';
+  }
+}
+function resumeGame() {
+  gamePaused = false;
+  document.getElementById('pauseMenu').style.display = 'none';
+}
+function openSettings() {
+  document.getElementById('pauseMenu').style.display = 'none';
+  document.getElementById('settingsMenu').style.display = 'flex';
+}
+function closeBattleSettings() {
+  document.getElementById('settingsMenu').style.display = 'none';
+  document.getElementById('pauseMenu').style.display = 'flex';
+}
+function setP2Mode(mode) {
+  p2Mode = mode;
+  document.getElementById('settingsMenu').style.display = 'none';
+  resumeGame();
+}
+class Fighter {
+  constructor(x, y, direction, color, controls) {
+    this.x = x;
+    this.y = y;
+    this.width = 50;
+    this.height = 100;
+    this.speed = 1.5;
+    this.jumpForce = -8;
+    this.velY = 0;
+    this.direction = direction;
+    this.color = color;
+    this.health = 200;
+    this.isAttacking = false;
+    this.attackType = null;
+    this.comboCount = 0;
+    this.lastHitTime = 0;
+    this.attackBox = {
+      width: 100,
+      height: 80
+    };
+    this.controls = controls;
+    this.grounded = false;
+    this.state = 'idle';
+    this.airComboCount = 0;
+    this.isLaunched = false;
+    this.isBound = false;
+    this.fallSpeed = 0.2;
+    this.walkFrame = 0;
+    this.walkTimer = 0;
+    this.armAngle = 0;
+    this.legAngle = 0;
+    this.boundTimer = 0;
+    this.hitCount = 0;
+    this.animationFrame = 0;
+    this.attackAnimationProgress = 0;
+    this.damageScaling = 1.0;
+    this.currentComboDamage = 0;
+    this.lastComboTime = 0;
+    this.isBlocking = false;
+    this.movingBackward = false;
+    this.backwardSpeedMultiplier = 0.5;
+    this.lastBlockTime = 0;
+    this.blockAnimationFrame = 0;
+    this.isRecovering = false;
+    this.recoveryFrame = 0;
+    this.recoveryTimer = 0;
+    this.isCrouching = false;
+    this.crouchFrame = 0;
+    this.crouchAnimationTimer = 0;
+    this.crouchSpeed = 0.8;
+    this.isStomachHit = false;
+    this.stomachHitFrame = 0;
+  }
+  drawLimb(startX, startY, length, angle, width) {
+    ctx.save();
+    ctx.translate(startX, startY);
+    ctx.rotate(angle);
+    ctx.fillRect(-width / 2, 0, width, length);
+    ctx.restore();
+  }
+  draw() {
+    if (this.isRecovering) {
+      ctx.fillStyle = this.color;
+      if (this.recoveryFrame === 0) {
+        ctx.fillRect(this.x, this.y + this.height - 20, this.width + 20, 20);
+        ctx.beginPath();
+        ctx.arc(this.x + (this.direction === 1 ? this.width + 20 : 0), this.y + this.height - 20, 15, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (this.recoveryFrame === 1) {
+        ctx.fillRect(this.x, this.y + this.height - 50, this.width, 50);
+        ctx.beginPath();
+        ctx.arc(this.x + this.width / 2, this.y + this.height - 65, 15, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (this.recoveryFrame === 2) {
+        ctx.fillRect(this.x, this.y + 20, this.width, this.height - 20);
+        ctx.beginPath();
+        ctx.arc(this.x + this.width / 2, this.y + 5, 15, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      return;
+    }
+    if (this.isLaunched || this.isBound) {
+      ctx.save();
+      ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+      let rotation = 0;
+      if (this.isBound) {
+        rotation = Math.PI;
+      } else if (this.state === 'punch') {
+        rotation = Math.PI / 4 * (this.direction === 1 ? 1 : -1);
+      } else if (this.state === 'kick') {
+        rotation = Math.PI / 2 * (this.direction === 1 ? -1 : 1);
+      } else if (this.state === 'launcher') {
+        rotation = Math.PI / 3 * (this.direction === 1 ? 1 : -1);
+      } else {
+        rotation = Math.PI / 2 * (this.direction === 1 ? 1 : -1);
+      }
+      ctx.rotate(rotation);
+      ctx.fillStyle = this.color;
+      ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+      ctx.beginPath();
+      ctx.arc(0, -this.height / 2 - 15, 15, 0, Math.PI * 2);
+      ctx.fill();
+      if (this.isBound) {
+        this.drawLimb(-this.width / 2, 0, 40, -Math.PI / 4, 10);
+        this.drawLimb(this.width / 2, 0, 40, Math.PI / 4, 10);
+        this.drawLimb(-10, this.height / 2, 40, Math.PI / 3, 10);
+        this.drawLimb(10, this.height / 2, 40, -Math.PI / 3, 10);
+      } else if (this.state === 'punch') {
+        this.drawLimb(-this.width / 2, 0, 40, 0, 10);
+        this.drawLimb(this.width / 2, 0, 40, Math.PI / 4, 10);
+        this.drawLimb(-10, this.height / 2, 40, Math.PI / 6, 10);
+        this.drawLimb(10, this.height / 2, 40, -Math.PI / 6, 10);
+      } else if (this.state === 'kick') {
+        this.drawLimb(-this.width / 2, 0, 40, -Math.PI / 6, 10);
+        this.drawLimb(this.width / 2, 0, 40, Math.PI / 6, 10);
+        this.drawLimb(-10, this.height / 2, 40, 0, 10);
+        this.drawLimb(10, this.height / 2, 40, -Math.PI / 4, 10);
+      } else if (this.state === 'launcher') {
+        this.drawLimb(-this.width / 2, 0, 40, -Math.PI / 2, 10);
+        this.drawLimb(this.width / 2, 0, 40, Math.PI / 2, 10);
+        this.drawLimb(-10, this.height / 2, 40, Math.PI / 4, 10);
+        this.drawLimb(10, this.height / 2, 40, -Math.PI / 4, 10);
+      } else {
+        this.drawLimb(-this.width / 2, 0, 40, -Math.PI / 6, 10);
+        this.drawLimb(this.width / 2, 0, 40, Math.PI / 6, 10);
+        this.drawLimb(-10, this.height / 2, 40, Math.PI / 4, 10);
+        this.drawLimb(10, this.height / 2, 40, -Math.PI / 4, 10);
+      }
+      ctx.restore();
+    } else {
+      ctx.fillStyle = this.color;
+      ctx.fillRect(this.x, this.y, this.width, this.height / 1.5);
+      ctx.beginPath();
+      ctx.arc(this.x + this.width / 2, this.y - 15, 15, 0, Math.PI * 2);
+      ctx.fill();
+      let armAngle = 0;
+      if (this.state === 'punch') {
+        armAngle = this.direction === 1 ? 0 : Math.PI;
+      } else {
+        armAngle = Math.sin(this.walkFrame * 0.5) * 0.3;
+      }
+      if (this.isBlocking && this.movingBackward) {
+        ctx.save();
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 40, 0, Math.PI * 2);
+        ctx.fill();
+        if (this === player2 && Date.now() - this.lastBlockTime < 200) {
+          ctx.strokeStyle = this.color;
+          ctx.lineWidth = 3;
+          for (let i = 0; i < 8; i++) {
+            const angle = Math.PI * 2 / 8 * i;
+            ctx.beginPath();
+            ctx.moveTo(this.x + this.width / 2, this.y + this.height / 2);
+            ctx.lineTo(this.x + this.width / 2 + Math.cos(angle) * 60, this.y + this.height / 2 + Math.sin(angle) * 60);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+        this.drawLimb(this.x + 5, this.y + 10, 40, Math.PI / 2, 10);
+        this.drawLimb(this.x + this.width - 5, this.y + 10, 40, Math.PI / 2, 10);
+      } else {
+        this.drawLimb(this.x + 5, this.y + 10, 40, armAngle + (this.direction === 1 ? -0.3 : 0.3), 10);
+        this.drawLimb(this.x + this.width - 5, this.y + 10, 40, -armAngle + (this.direction === 1 ? 0.3 : -0.3), 10);
+      }
+      if (this.grounded) {
+        let legOffset = keys[this.controls.left] || keys[this.controls.right] ? Math.sin(this.walkFrame * 0.5) * 0.5 : 0;
+        this.drawLimb(this.x + 10, this.y + this.height / 1.5, 50, legOffset, 12);
+        this.drawLimb(this.x + this.width - 10, this.y + this.height / 1.5, 50, -legOffset, 12);
+      }
+      if (this.isAttacking) {
+        ctx.fillStyle = this.color.replace(')', ', 0.5)').replace('rgb', 'rgba');
+        let effectX = this.direction === 1 ? this.x + this.width : this.x - 40;
+        if (this.state === 'punch') {
+          const punchProgress = this.animationFrame % 20 / 20;
+          const punchExtend = Math.sin(punchProgress * Math.PI) * 30;
+          const punchHeight = Math.sin(punchProgress * Math.PI * 2) * 10;
+          ctx.fillRect(effectX + punchExtend, this.y + 20 + punchHeight, 40, 10);
+        } else if (this.state === 'kick') {
+          const kickProgress = this.animationFrame % 20 / 20;
+          const kickAngle = Math.sin(kickProgress * Math.PI) * Math.PI / 3;
+          const kickExtend = Math.sin(kickProgress * Math.PI) * 20;
+          ctx.save();
+          ctx.translate(effectX + 20 + kickExtend, this.y + 60);
+          ctx.rotate(kickAngle * this.direction);
+          ctx.fillRect(-20, -10, 40, 20);
+          ctx.restore();
+        } else if (this.state === 'launcher') {
+          const launchProgress = this.animationFrame % 24 / 24;
+          const launchHeight = Math.sin(launchProgress * Math.PI) * 20;
+          const launchWidth = Math.sin(launchProgress * Math.PI * 2) * 10;
+          ctx.fillRect(effectX - launchWidth / 2, this.y - 20 + launchHeight, 20 + launchWidth, 60);
+        } else if (this.state === 'bound') {
+          const boundProgress = this.animationFrame % 30 / 30;
+          const boundSize = Math.sin(boundProgress * Math.PI) * 15;
+          const boundRotation = boundProgress * Math.PI * 2;
+          ctx.save();
+          ctx.translate(effectX + 20, this.y + 60);
+          ctx.rotate(boundRotation);
+          ctx.fillRect(-40 - boundSize / 2, -20 - boundSize / 2, 80 + boundSize, 40 + boundSize);
+          ctx.restore();
+        }
+      }
+    }
+    if (this.isCrouching) {
+      ctx.fillStyle = this.color;
+      if (this.crouchFrame === 0) {
+        ctx.fillRect(this.x, this.y + this.height / 2, this.width, this.height / 2);
+        ctx.beginPath();
+        ctx.arc(this.x + this.width / 2, this.y + this.height / 2 - 10, 15, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (this.crouchFrame === 1) {
+        ctx.fillRect(this.x, this.y + this.height / 3, this.width, this.height * 2 / 3);
+        ctx.beginPath();
+        ctx.arc(this.x + this.width / 2, this.y + this.height / 3 - 5, 15, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (this.crouchFrame === 2) {
+        ctx.fillRect(this.x, this.y + this.height / 1.5, this.width, this.height / 2);
+        ctx.beginPath();
+        ctx.arc(this.x + this.width / 2, this.y + this.height / 1.5 - 5, 15, 0, Math.PI * 2);
+        ctx.fill();
+        this.drawLimb(this.x + 5, this.y + this.height / 1.5, 20, -Math.PI / 4, 8);
+        this.drawLimb(this.x + this.width - 5, this.y + this.height / 1.5, 20, Math.PI / 4, 8);
+      }
+    }
+    if (this.isStomachHit) {
+      ctx.fillStyle = this.color;
+      const fallProgress = this.stomachHitFrame / 5;
+      const bendAngle = fallProgress * Math.PI / 4;
+      ctx.save();
+      ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+      ctx.rotate(bendAngle);
+      ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+      ctx.beginPath();
+      ctx.arc(0, -this.height / 2 - 15, 15, 0, Math.PI * 2);
+      ctx.fill();
+      this.drawLimb(-this.width / 2, 0, 40, Math.PI / 3, 10);
+      this.drawLimb(this.width / 2, 0, 40, -Math.PI / 3, 10);
+      ctx.restore();
+    }
+  }
+  update() {
+    if (this.isRecovering) {
+      this.recoveryTimer++;
+      if (this.recoveryTimer > 30) {
+        this.recoveryTimer = 0;
+        this.recoveryFrame++;
+        if (this.recoveryFrame >= 3) {
+          this.isRecovering = false;
+          this.recoveryFrame = 0;
+        }
+      }
+      return;
+    }
+    if (this.isLaunched || this.isBound) {
+      this.velY += 0.1;
+      this.y += this.velY;
+      if (this.y + this.height > canvas.height) {
+        this.y = canvas.height - this.height;
+        this.velY = 0;
+        this.grounded = true;
+        this.isLaunched = false;
+        this.isBound = false;
+        this.airComboCount = 0;
+        this.isRecovering = true;
+        this.recoveryFrame = 0;
+        this.recoveryTimer = 0;
+      }
+      return;
+    }
+    if (keys['s'] && this === player1 && !this.isLaunched && !this.isBound && !this.isRecovering) {
+      if (!this.isCrouching) {
+        this.isCrouching = true;
+        this.crouchFrame = 0;
+      }
+      this.crouchAnimationTimer++;
+      if (this.crouchAnimationTimer > 8) {
+        this.crouchFrame = Math.min(this.crouchFrame + 1, 2);
+        this.crouchAnimationTimer = 0;
+      }
+    } else if (this.isCrouching) {
+      this.crouchFrame = Math.max(this.crouchFrame - 1, 0);
+      if (this.crouchFrame === 0) {
+        this.isCrouching = false;
+      }
+    }
+    if (this.isCrouching) {
+      this.speed *= this.crouchSpeed;
+    }
+    if (this.isCrouching && keys[this.controls.up]) {
+      keys[this.controls.up] = false;
+    }
+    if (!this.isRecovering) {
+      const other = this === player1 ? player2 : player1;
+      const nextX = this.x + (keys[this.controls.right] ? this.speed : 0) - (keys[this.controls.left] ? this.speed : 0);
+      if (nextX + this.width > other.x && nextX < other.x + other.width && this.y + this.height > other.y && this.y < other.y + other.height) {
+        if (keys[this.controls.right] && this.x < other.x) {
+          this.x = other.x - this.width;
+        }
+        if (keys[this.controls.left] && this.x > other.x) {
+          this.x = other.x + other.width;
+        }
+      } else {
+        if (keys[this.controls.left]) {
+          this.movingBackward = this.direction === 1;
+          const moveSpeed = this.movingBackward ? this.speed * this.backwardSpeedMultiplier : this.speed;
+          this.x -= moveSpeed;
+          if (this.grounded) {
+            this.walkTimer++;
+            if (this.walkTimer > 3) {
+              this.walkFrame = (this.walkFrame + 1) % 8;
+              this.walkTimer = 0;
+            }
+          }
+        }
+        if (keys[this.controls.right]) {
+          this.movingBackward = this.direction === -1;
+          const moveSpeed = this.movingBackward ? this.speed * this.backwardSpeedMultiplier : this.speed;
+          this.x += moveSpeed;
+          if (this.grounded) {
+            this.walkTimer++;
+            if (this.walkTimer > 3) {
+              this.walkFrame = (this.walkFrame + 1) % 8;
+              this.walkTimer = 0;
+            }
+          }
+        }
+      }
+    }
+    this.direction = this.x < player2.x ? 1 : -1;
+    this.isBlocking = this.movingBackward && !this.isAttacking && this.grounded;
+    if (keys[this.controls.up] && this.grounded) {
+      this.velY = this.jumpForce;
+      this.grounded = false;
+    }
+    if (!this.isAttacking) {
+      if (keys[this.controls.punch]) this.attack('punch');
+      if (keys[this.controls.kick]) this.attack('kick');
+      if (keys[this.controls.launcher]) this.attack('launcher');
+      if (keys[this.controls.bound]) this.attack('bound');
+    }
+    if (this.isBound) {
+      if (this.grounded) {
+        this.boundTimer++;
+        if (this.boundTimer >= 120) {
+          this.isBound = false;
+          this.boundTimer = 0;
+        }
+      }
+    }
+    if (this.grounded && !this.isBound && !this.isLaunched) {
+      this.hitCount = 0;
+      this.damageScaling = 1.0;
+    }
+    this.animationFrame = (this.animationFrame + 1) % 120;
+    this.velY += this.fallSpeed;
+    this.y += this.velY;
+    if (this.y + this.height > canvas.height) {
+      this.y = canvas.height - this.height;
+      this.velY = 0;
+      this.grounded = true;
+      if (this.isLaunched || this.isBound) {
+        this.isLaunched = false;
+        this.isBound = false;
+        this.airComboCount = 0;
+        this.isRecovering = true;
+        this.recoveryFrame = 0;
+        this.recoveryTimer = 0;
+      }
+    }
+    this.speed = 1.5;
+    if (gameMode === 'practice' && this.health <= 0) {
+      this.health = 200;
+      updateHealthBars();
+    }
+    if (this === player2) {
+      return;
+    }
+  }
+  attack(type) {
+    if (this.isRecovering) return;
+    if (this.isLaunched || this.isBound) return;
+    this.isAttacking = true;
+    this.state = type;
+    this.attackType = type;
+    setTimeout(() => {
+      this.isAttacking = false;
+      this.attackType = null;
+      this.state = 'idle';
+    }, 300);
+    let baseDamage = 15;
+    if (type === 'launcher') {
+      baseDamage = 20;
+    }
+    let damage = baseDamage;
+    let otherFighter = this === player1 ? player2 : player1;
+    if (otherFighter.isLaunched || otherFighter.isBound) {
+      const hitCount = otherFighter.hitCount;
+      if (hitCount === 1) otherFighter.damageScaling = 1.0;else if (hitCount === 2) otherFighter.damageScaling = 0.55;else if (hitCount === 3) otherFighter.damageScaling = 0.45;else if (hitCount === 4) otherFighter.damageScaling = 0.33;else otherFighter.damageScaling = 0.30;
+      damage = Math.floor(baseDamage * otherFighter.damageScaling);
+    } else {
+      damage = baseDamage;
+      otherFighter.damageScaling = 1.0;
+      otherFighter.hitCount = 0;
+    }
+    const COMBO_TIMEOUT = 1000;
+    if (Date.now() - this.lastComboTime > COMBO_TIMEOUT) {
+      this.currentComboDamage = 0;
+    }
+    const attackBox = {
+      width: type === 'bound' ? 150 : 100,
+      height: type === 'bound' ? 120 : 80
+    };
+    const attackX = this.direction === 1 ? this.x + this.width : this.x - attackBox.width;
+    if (this.isCrouching && type === 'launcher') {
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+          this.crouchFrame = Math.max(0, this.crouchFrame - 1);
+        }, i * 60);
+      }
+      if (attackX < otherFighter.x + otherFighter.width && attackX + attackBox.width > otherFighter.x && this.y - 40 < otherFighter.y + otherFighter.height && this.y + 40 + attackBox.height > otherFighter.y) {
+        otherFighter.isStomachHit = true;
+        otherFighter.stomachHitFrame = 0;
+        const hitAnimation = setInterval(() => {
+          otherFighter.stomachHitFrame++;
+          if (otherFighter.stomachHitFrame >= 5) {
+            clearInterval(hitAnimation);
+            otherFighter.isStomachHit = false;
+            otherFighter.isLaunched = true;
+            otherFighter.velY = -4;
+          }
+        }, 60);
+        damage = Math.floor(baseDamage * 1.2);
+      }
+      return;
+    }
+    if (attackX < otherFighter.x + otherFighter.width && attackX + attackBox.width > otherFighter.x && this.y - 40 < otherFighter.y + otherFighter.height && this.y + 40 + attackBox.height > otherFighter.y) {
+      if (otherFighter.isBlocking && type !== 'kick') {
+        ctx.save();
+        ctx.strokeStyle = otherFighter.color;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(otherFighter.x + otherFighter.width / 2, otherFighter.y + otherFighter.height / 2, 50, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        otherFighter.x += this.direction * (3 * 0.3);
+        otherFighter.lastBlockTime = Date.now();
+        return;
+      }
+      this.currentComboDamage += damage;
+      this.lastComboTime = Date.now();
+      const damageIndicator = document.getElementById('comboDamage');
+      const scalingIndicator = document.getElementById('damageScaling');
+      damageIndicator.textContent = `Combo Damage: ${this.currentComboDamage}`;
+      if (otherFighter.isLaunched || otherFighter.isBound) {
+        let scalingText = "Damage Scaling: ";
+        if (otherFighter.hitCount === 1) scalingText += "100%";else if (otherFighter.hitCount === 2) scalingText += "55%";else if (otherFighter.hitCount === 3) scalingText += "45%";else if (otherFighter.hitCount === 4) scalingText += "33%";else scalingText += "30%";
+        scalingIndicator.textContent = scalingText;
+      } else {
+        scalingIndicator.textContent = "Damage Scaling: 100%";
+      }
+      document.getElementById('damageIndicator').style.opacity = '1';
+      setTimeout(() => {
+        if (Date.now() - this.lastComboTime >= COMBO_TIMEOUT) {
+          document.getElementById('damageIndicator').style.opacity = '0';
+          this.currentComboDamage = 0;
+        }
+      }, COMBO_TIMEOUT);
+      otherFighter.health -= damage;
+      otherFighter.hitCount++;
+      const baseKnockback = 3;
+      const knockbackMultiplier = otherFighter.isLaunched || otherFighter.isBound ? Math.min(otherFighter.hitCount * 1.0, 6) : Math.min(otherFighter.hitCount * 0.5, 4);
+      if (type === 'launcher') {
+        otherFighter.isLaunched = true;
+        otherFighter.isBound = false;
+        otherFighter.airComboCount = 0;
+        otherFighter.velY = -6;
+      } else if (type === 'bound' && (otherFighter.isLaunched || !otherFighter.grounded)) {
+        otherFighter.isBound = true;
+        otherFighter.isLaunched = false;
+        otherFighter.velY = -3;
+        otherFighter.boundTimer = 0;
+      } else {
+        otherFighter.velY = -baseKnockback;
+        otherFighter.x += this.direction * baseKnockback;
+        if (otherFighter.isLaunched || otherFighter.isBound) {
+          otherFighter.airComboCount++;
+          if (otherFighter.airComboCount >= 4) {
+            otherFighter.isLaunched = false;
+            otherFighter.isBound = false;
+            otherFighter.velY = 10;
+          }
+        }
+      }
+      otherFighter.grounded = false;
+      this.lastHitTime = Date.now();
+      updateHealthBars();
+    }
+  }
+}
+const keys = {};
+const player1 = new Fighter(100, 200, 1, 'red', {
+  left: 'a',
+  right: 'd',
+  up: 'w',
+  punch: 'g',
+  kick: 'h',
+  launcher: 'j',
+  bound: 'k'
+});
+const player2 = new Fighter(650, 200, -1, 'blue', {});
+let currentComboDamage = 0;
+let lastComboTime = 0;
+const COMBO_TIMEOUT = 3000;
+function updateHealthBars() {
+  document.getElementById('p1Health').style.width = `${player1.health / 200 * 100}%`;
+  document.getElementById('p2Health').style.width = `${player2.health / 200 * 100}%`;
+  if ((player1.health <= 0 || player2.health <= 0) && gameMode !== 'practice') {
+    setTimeout(() => {
+      alert(`${player1.health <= 0 ? 'Player 2' : 'Player 1'} Wins!`);
+      returnToMainMenu();
+    }, 100);
+  }
+}
+function resetGame() {
+  player1.health = 200;
+  player2.health = 200;
+  player1.x = 100;
+  player2.x = 650;
+  player1.y = 200;
+  player2.y = 200;
+  player1.isLaunched = false;
+  player2.isLaunched = false;
+  player1.isBound = false;
+  player2.isBound = false;
+  player1.airComboCount = 0;
+  player2.airComboCount = 0;
+  currentComboDamage = 0;
+  lastComboTime = 0;
+  player1.damageScaling = 1.0;
+  player2.damageScaling = 1.0;
+  player1.currentComboDamage = 0;
+  player2.currentComboDamage = 0;
+  player1.lastComboTime = 0;
+  player2.lastComboTime = 0;
+  document.getElementById('damageIndicator').style.opacity = '0';
+  document.getElementById('comboDamage').textContent = '';
+  document.getElementById('damageScaling').textContent = '';
+  updateHealthBars();
+  if (gameMode === 'practice') {
+    player1.health = 200;
+    player2.health = 200;
+    updateHealthBars();
+  }
+}
+function gameLoop() {
+  if (!gamePaused) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    player1.update();
+    if (p2Mode === 'blocking') {
+      player2.isBlocking = !player2.isAttacking && player2.grounded;
+    } else if (p2Mode === 'cpu') {
+      updateCPU();
+    } else if (p2Mode === 'following') {
+      updateFollowingDummy();
+    }
+    player2.update();
+    player1.draw();
+    player2.draw();
+  }
+  requestAnimationFrame(gameLoop);
+}
+function updateCPU() {
+  const dist = Math.abs(player1.x - player2.x);
+  if (dist > 200) {
+    if (player2.x < player1.x) {
+      keys[player2.controls.right] = true;
+      keys[player2.controls.left] = false;
+    } else {
+      keys[player2.controls.left] = true;
+      keys[player2.controls.right] = false;
+    }
+  } else {
+    if (Math.random() < 0.03) {
+      const moves = ['punch', 'kick', 'launcher', 'bound'];
+      const move = moves[Math.floor(Math.random() * moves.length)];
+      player2.attack(move);
+    }
+    player2.isBlocking = Math.random() < 0.4;
+  }
+}
+function updateFollowingDummy() {
+  const FOLLOW_DISTANCE = 100;
+  const targetX = player1.x + (player1.direction === 1 ? FOLLOW_DISTANCE : -FOLLOW_DISTANCE);
+  if (Math.abs(player2.x - targetX) > 10) {
+    if (player2.x < targetX) {
+      keys[player2.controls.right] = true;
+      keys[player2.controls.left] = false;
+    } else {
+      keys[player2.controls.left] = true;
+      keys[player2.controls.right] = false;
+    }
+  } else {
+    keys[player2.controls.left] = false;
+    keys[player2.controls.right] = false;
+  }
+}
+let canvasContainer = document.createElement('div');
+canvasContainer.style.position = 'relative';
+canvasContainer.style.width = canvas.width + 'px';
+canvasContainer.style.height = canvas.height + 'px';
+canvasContainer.style.margin = '0 auto';
+canvas.parentNode.insertBefore(canvasContainer, canvas);
+canvasContainer.appendChild(canvas);
+let healthBars = document.querySelector('.health-bars');
+let damageIndicator = document.querySelector('#damageIndicator');
+canvasContainer.appendChild(healthBars);
+canvasContainer.appendChild(damageIndicator);
+let controlsGuide = document.querySelector('.controls-guide');
+document.body.appendChild(controlsGuide);
+controlsGuide.innerHTML = `
+    Player 1 Controls: 
+    <span class="control-key">A/D</span> Move 
+    <span class="control-key">W</span> Jump 
+    <span class="control-key">S</span> Crouch
+    <span class="control-key">G</span> Punch 
+    <span class="control-key">H</span> Kick 
+    <span class="control-key">J</span> Launcher/Stomach Hit
+    <span class="control-key">K</span> Bound
+    <span class="control-key">P</span> Pause
+`;
+function startArcadeMode() {
+  gameMode = 'arcade';
+  document.getElementById('mainMenu').style.display = 'none';
+  resetGame();
+  resumeGame();
+}
+function startPracticeMode() {
+  gameMode = 'practice';
+  document.getElementById('mainMenu').style.display = 'none';
+  p2Mode = 'following';
+  resetGame();
+  resumeGame();
+}
+function showSettings() {
+  document.getElementById('settingsMenu').style.display = 'flex';
+}
+function returnToMainMenu() {
+  pauseGame();
+  document.getElementById('mainMenu').style.display = 'flex';
+  document.getElementById('pauseMenu').style.display = 'none';
+  document.getElementById('settingsMenu').style.display = 'none';
+}
+window.addEventListener('keydown', e => {
+  if (e.key === 'p') {
+    if (!gamePaused) {
+      pauseGame();
+    } else {
+      resumeGame();
+    }
+  }
+  if (e.key === 'Escape') {
+    returnToMainMenu();
+  }
+  keys[e.key] = true;
+});
+window.addEventListener('keyup', e => {
+  keys[e.key] = false;
+});
+gameLoop();</script>
+</body>
+</html>
