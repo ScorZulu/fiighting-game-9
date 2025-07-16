@@ -176,7 +176,6 @@ body {
     <div class="menu-options">
       <button onclick="startArcadeMode()">Arcade Mode</button>
       <button onclick="startPracticeMode()">Practice Mode</button>
-      <button onclick="showSettings()">Settings</button>
     </div>
   </div>
 </div>
@@ -221,32 +220,19 @@ body {
     <h2>Game Paused</h2>
     <div class="menu-options">
       <button onclick="resumeGame()">Resume</button>
-      <button onclick="openSettings()">Battle Settings</button>
       <button onclick="resetGame()">Reset Match</button>
       <button onclick="returnToMainMenu()">Main Menu</button>
     </div>
   </div>
 </div>
 
-<div class="menu-overlay" id="settingsMenu">
-  <div class="menu">
-    <h2>Battle Settings</h2>
-    <div class="menu-options">
-      <button onclick="setP2Mode(&apos;dummy&apos;)">Training Dummy</button>
-      <button onclick="setP2Mode(&apos;blocking&apos;)">Blocking Dummy</button>
-      <button onclick="setP2Mode(&apos;cpu&apos;)">CPU Opponent</button>
-      <button onclick="setP2Mode(&apos;following&apos;)">Following Dummy</button>
-      <button onclick="closeBattleSettings()">Back</button>
-    </div>
-  </div>
-</div>
 
 <script>const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth > 800 ? 800 : window.innerWidth;
 canvas.height = 400;
 let gamePaused = false;
-let p2Mode = 'dummy';
+
 let gameMode = null;
 function pauseGame() {
   gamePaused = true;
@@ -259,19 +245,6 @@ function pauseGame() {
 function resumeGame() {
   gamePaused = false;
   document.getElementById('pauseMenu').style.display = 'none';
-}
-function openSettings() {
-  document.getElementById('pauseMenu').style.display = 'none';
-  document.getElementById('settingsMenu').style.display = 'flex';
-}
-function closeBattleSettings() {
-  document.getElementById('settingsMenu').style.display = 'none';
-  document.getElementById('pauseMenu').style.display = 'flex';
-}
-function setP2Mode(mode) {
-  p2Mode = mode;
-  document.getElementById('settingsMenu').style.display = 'none';
-  resumeGame();
 }
 class Fighter {
   constructor(x, y, direction, color, controls) {
@@ -603,7 +576,8 @@ class Fighter {
         }
       }
     }
-    this.direction = this.x < player2.x ? 1 : -1;
+    const opponent = this === player1 ? player2 : player1;
+    this.direction = this.x < opponent.x ? 1 : -1;
     this.isBlocking = this.movingBackward && !this.isAttacking && this.grounded;
     if (keys[this.controls.up] && this.grounded) {
       this.velY = this.jumpForce;
@@ -784,19 +758,27 @@ const player1 = new Fighter(100, 200, 1, 'red', {
   launcher: 'j',
   bound: 'k'
 });
-const player2 = new Fighter(650, 200, -1, 'blue', {});
+const player2 = new Fighter(650, 200, -1, 'blue', {
+  left: 'ArrowLeft',
+  right: 'ArrowRight',
+  up: 'ArrowUp',
+  punch: 'Num1',
+  kick: 'Num2',
+  launcher: 'Num3',
+  bound: 'Num4'
+});
 let currentComboDamage = 0;
 let lastComboTime = 0;
 const COMBO_TIMEOUT = 3000;
 function updateHealthBars() {
   document.getElementById('p1Health').style.width = `${player1.health / 200 * 100}%`;
   document.getElementById('p2Health').style.width = `${player2.health / 200 * 100}%`;
-  if ((player1.health <= 0 || player2.health <= 0) && gameMode !== 'practice') {
-    setTimeout(() => {
-      alert(`${player1.health <= 0 ? 'Player 2' : 'Player 1'} Wins!`);
-      returnToMainMenu();
-    }, 100);
-  }
+    if ((player1.health <= 0 || player2.health <= 0) && gameMode !== 'practice') {
+      setTimeout(() => {
+        alert(`${player1.health <= 0 ? 'CPU' : 'Player 1'} Wins!`);
+        returnToMainMenu();
+      }, 100);
+    }
 }
 function resetGame() {
   player1.health = 200;
@@ -833,13 +815,7 @@ function gameLoop() {
   if (!gamePaused) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     player1.update();
-    if (p2Mode === 'blocking') {
-      player2.isBlocking = !player2.isAttacking && player2.grounded;
-    } else if (p2Mode === 'cpu') {
-      updateCPU();
-    } else if (p2Mode === 'following') {
-      updateFollowingDummy();
-    }
+    updateCPU();
     player2.update();
     player1.draw();
     player2.draw();
@@ -857,28 +833,14 @@ function updateCPU() {
       keys[player2.controls.right] = false;
     }
   } else {
+    keys[player2.controls.left] = false;
+    keys[player2.controls.right] = false;
     if (Math.random() < 0.03) {
       const moves = ['punch', 'kick', 'launcher', 'bound'];
       const move = moves[Math.floor(Math.random() * moves.length)];
       player2.attack(move);
     }
     player2.isBlocking = Math.random() < 0.4;
-  }
-}
-function updateFollowingDummy() {
-  const FOLLOW_DISTANCE = 100;
-  const targetX = player1.x + (player1.direction === 1 ? FOLLOW_DISTANCE : -FOLLOW_DISTANCE);
-  if (Math.abs(player2.x - targetX) > 10) {
-    if (player2.x < targetX) {
-      keys[player2.controls.right] = true;
-      keys[player2.controls.left] = false;
-    } else {
-      keys[player2.controls.left] = true;
-      keys[player2.controls.right] = false;
-    }
-  } else {
-    keys[player2.controls.left] = false;
-    keys[player2.controls.right] = false;
   }
 }
 let canvasContainer = document.createElement('div');
@@ -914,18 +876,13 @@ function startArcadeMode() {
 function startPracticeMode() {
   gameMode = 'practice';
   document.getElementById('mainMenu').style.display = 'none';
-  p2Mode = 'following';
   resetGame();
   resumeGame();
-}
-function showSettings() {
-  document.getElementById('settingsMenu').style.display = 'flex';
 }
 function returnToMainMenu() {
   pauseGame();
   document.getElementById('mainMenu').style.display = 'flex';
   document.getElementById('pauseMenu').style.display = 'none';
-  document.getElementById('settingsMenu').style.display = 'none';
 }
 window.addEventListener('keydown', e => {
   if (e.key === 'p') {
